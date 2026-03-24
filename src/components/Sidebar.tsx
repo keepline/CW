@@ -1,9 +1,12 @@
+import { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, CreditCard, Receipt, Wallet, PiggyBank,
   TrendingUp, Target, BarChart3, Bell, Moon, Sun,
+  Download, Upload,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
+import { exportDb, importDb } from '@/utils/database';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘' },
@@ -19,6 +22,31 @@ const navItems = [
 
 export default function Sidebar() {
   const { dark, toggle } = useThemeStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const data = exportDb();
+    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finance-backup-${new Date().toISOString().slice(0, 10)}.db`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = new Uint8Array(reader.result as ArrayBuffer);
+      importDb(data);
+      window.location.reload();
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
 
   return (
     <aside className="w-56 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed left-0 top-0 z-40">
@@ -49,7 +77,28 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          导出数据
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          导入数据
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".db"
+          onChange={handleImport}
+          className="hidden"
+        />
         <button
           onClick={toggle}
           className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
